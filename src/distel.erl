@@ -30,6 +30,7 @@
 
 -import(filename, [dirname/1
                    , join/1
+                   , basename/1
                    , basename/2]).
 
 -compile(export_all).
@@ -154,13 +155,32 @@ find_source(Mod) ->
     {ok, BeamFName} ->
       try {ok,guess_source_file(Mod, BeamFName)}
       catch
-        nothing -> {error,fmt("Can't find source for ~p", [BeamFName])};
-        several -> {error,fmt("Several possible sources for ~p", [BeamFName])};
-        _:R -> {error,fmt("Couldnt guess source ~p ~p",[BeamFName,R])}
+        nothing -> {error,fmt("Can't find source for ~p", [Mod])};
+        several -> {error,fmt("Several possible sources for ~p", [Mod])};
+        _:R -> {error,fmt("Couldnt guess source ~p ~p",[Mod,R])}
       end;
-    error ->
-      {error, fmt("Can't find module '~p' on ~p", [Mod, node()])}
+      error ->
+        try {ok, source(Mod)}
+        catch
+          nothing      ->
+            {error,fmt("Can't find source for ~p", [Mod])};
+          several      ->
+            {error,fmt("Several possible sources for ~p", [Mod])};
+          _:R -> {error,fmt("Couldnt guess source ~p ~p",[Mod,R])}
+        end
   end.
+
+source(Mod) ->
+    SourceName = to_list(Mod) ++ ".erl",
+    Paths = [dirname(P) || P <- code:get_path(), basename(P) =:= "ebin"],
+    F = fun(P) ->
+                SrcDirs = [["src", SourceName],
+                           ["esrc", SourceName],
+                           ["erl", SourceName],
+                           ["src", "*", SourceName]],
+                lists:map(fun(Dir) -> join([P|Dir]) end, SrcDirs)
+        end,
+    try_srcs(lists:concat(lists:map(F, Paths))).
 
 %% Ret: AbsName | throw(Reason)
 guess_source_file(Mod, BeamFName) ->
