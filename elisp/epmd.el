@@ -9,15 +9,17 @@
 (defun epmd-process (event arg)
   (check-event event 'init)
   ;; Arg is the request
-  (let* ((len (length arg))
-	 (len-msb (ash len -8))
-	 (len-lsb (logand len 255)))
-    (fsm-send-string (concat (string len-msb len-lsb)
-			     arg)))
+  (fsm-send-string (epmd-build-message arg))
   (ecase (elt arg 0)
     ((?n) (fsm-change-state #'epmd-recv-names-resp))
     ((?z) (fsm-change-state #'epmd-recv-port-resp))
     ((?a) (fsm-change-state #'epmd-recv-alive-resp))))
+
+(defun epmd-build-message (msg)
+  (let* ((len (length msg))
+	 (len-msb (ash len -8))
+	 (len-lsb (logand len 255)))
+    (concat (string len-msb len-lsb) msg)))
 
 (defun epmd-recv-names-resp (event data)
   (check-event event 'data)
@@ -76,6 +78,25 @@
 				   (format "%s[%s]\nUnable to connect.\n\n"
 					   string host)))))
 	(fsm-connect host epmd-port #'epmd-process "n" cont fail)))))
+
+(defun epmd-fetch-names-from-host-sync (host)
+  "Syncronously fetch nodenames registered with the current port mapper daemon."
+  (condition-case ex
+      (with-temp-buffer
+        (let ((socket (open-network-stream "epmd" (current-buffer) host epmd-port)))
+          (process-send-string socket (epmd-build-message "n"))
+          (accept-process-output socket 0.5)
+          (epmd-nodenames-from-string (buffer-string))))
+    ('file-error nil)))
+
+(defun epmd-nodenames-from-string (string)
+  (setq string (split-string (substring string 4)))
+  (let ((names  nil))
+    (while string
+      (when (string-equal (car string) "name")
+        (setq names (cons (cadr string) names)))
+      (setq string (cdr string)))
+    names))
 
 (defun epmd-port-please (node host cont &optional fail-cont)
   (fsm-connect host epmd-port #'epmd-process (concat "z" node) cont fail-cont))
