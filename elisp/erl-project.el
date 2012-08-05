@@ -4,7 +4,6 @@
 ;; TODO
 ;; - Keep tabs on modules in projects and auto-reload ones that change
 ;; - Close down node when last buffer in a project dies (erl-unload-hook)
-;; - Make sure we load distel modules even if we are using an external node.
 ;; - Fix bug with "buffer has a running process, kill it?"
 ;; - Fix edb-bug
 
@@ -41,20 +40,30 @@ for a file that is located inside a project."
 (defun erl-project-buffer-setup ()
   "Buffer specific (not necessarily buffer-local) setup."
   (when erl-project-auto-start-node
-    (message "project hook")
     (erl-project-ensure-buffer-node-started (current-buffer))
-    (message "names %s" (epmd-fetch-names-from-host-sync "localhost"))
     ))
 
 (defun erl-project-ensure-buffer-node-started (buffer)
   "Start a buffer's project's node if it is not already started."
-  (unless (erl-project-buffer-node-started-p buffer)
-    (erl-project-buffer-start-node buffer)))
+  (if (erl-project-buffer-node-started-p buffer)
+      (erl-project-buffer-check-backend buffer)
+      (erl-project-buffer-start-node buffer)))
+
+(defun erl-project-buffer-check-backend (buffer)
+  "Ensure that distel modules are available on the node used by `buffers''s
+project"
+  (erl-check-backend
+   (erl-project-make-node-name (erl-project-buffer-node-name)) nil))
 
 (defun erl-project-set-node-name-cache (str)
   "Sets the distel node-name cache to `str'@`system-name'. Return the newly set
 node-name"
-  (setq erl-nodename-cache (make-symbol (concat str "\@" system-name))))
+  (setq erl-nodename-cache (erl-project-make-node-name str)))
+
+(defun erl-project-make-node-name (str)
+  "Converts `str' to a valid erlang short node name of the form
+`str'@`system-name'"
+  (make-symbol (concat str "\@" system-name)))
 
 (defun erl-project-buffer-start-node (&optional buffer)
   "Starts a new erlang node for the project that `buffer' belongs to."
