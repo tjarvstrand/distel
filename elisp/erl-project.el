@@ -6,7 +6,13 @@
 ;; - Close down (internal) node when last buffer in a project dies
 ;;   (erl-unload-hook)
 ;; - Fix bug with "buffer has a running process, kill it?"
+;; - Don't start thousands of processes (related to previous point?).
 ;; - Fix edb-bug
+;; - Fix assertion-bug in epmd.el
+;; - Mark set when saving(?)
+;; - Fix no erlang-extended-mode for modules outside of projects.
+;; - Fix crashing hook for non-project modules.
+;; - Run distel nodeup-hook when inferior node is started.
 
 (defgroup erl-project '()
   "Distel and erlang-extended-mode development tools."
@@ -175,8 +181,15 @@ erl-project `proj'."
 (defun file-under-path-p (path file-name)
   "Returns non-nil if the fully qualified `file-name' is located underneath
 `path'."
-  (string-prefix-p (erl-project-normalize-path path)
-                   (expand-file-name file-name)))
+  (or
+   (string-prefix-p (erl-project-normalize-path path)
+                    (expand-file-name file-name))
+   (string-prefix-p                (erl-project-normalize-path path)
+                    (file-truename (expand-file-name file-name)))
+   (string-prefix-p (file-truename (erl-project-normalize-path path))
+                                   (expand-file-name file-name))
+   (string-prefix-p (file-truename (erl-project-normalize-path path))
+                    (file-truename (expand-file-name file-name))))
 
 (defun erl-project-normalize-path (path-str)
   "Bad name. Only replaces duplicate /'s in path-str and make sure it ends
