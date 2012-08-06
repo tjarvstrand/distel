@@ -90,7 +90,7 @@ node-name"
          (buffer-name (concat "*" project-name "*")))
     (erl-project-ensure-node-not-started node-name)
     (cd (expand-file-name (erl-project-root project)))
-    (erl-project-make-comint-buffer-node-name buffer-name code-path)
+    (erl-project-make-comint-buffer node-name buffer-name code-path)
     (erl-project-add-node node-name buffer-name)
     (erl-project-set-node-name-cache node-name)))
 
