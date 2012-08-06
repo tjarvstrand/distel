@@ -3,7 +3,8 @@
 
 ;; TODO
 ;; - Keep tabs on modules in projects and auto-reload ones that change
-;; - Close down node when last buffer in a project dies (erl-unload-hook)
+;; - Close down (internal) node when last buffer in a project dies
+;;   (erl-unload-hook)
 ;; - Fix bug with "buffer has a running process, kill it?"
 ;; - Fix edb-bug
 
@@ -16,9 +17,8 @@
   :group 'erl-project)
 
 (defcustom erl-project-auto-start-node t
-  "Whether to automagically start an erlang node when file in a project is
-opened. If non-nil, a node will be started whenever erlang-mode is activated
-for a file that is located inside a project."
+  "If non-nil, automagically start an erlang node whenever erlang-mode is
+activated for the first file that is located inside a project."
   :type 'boolean)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
