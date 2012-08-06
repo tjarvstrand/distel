@@ -189,7 +189,7 @@ erl-project `proj'."
    (string-prefix-p (file-truename (erl-project-normalize-path path))
                                    (expand-file-name file-name))
    (string-prefix-p (file-truename (erl-project-normalize-path path))
-                    (file-truename (expand-file-name file-name))))
+                    (file-truename (expand-file-name file-name)))))
 
 (defun erl-project-normalize-path (path-str)
   "Bad name. Only replaces duplicate /'s in path-str and make sure it ends
