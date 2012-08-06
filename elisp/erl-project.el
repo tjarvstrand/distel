@@ -56,9 +56,9 @@ activated for the first file that is located inside a project."
 
 (defun erl-project-ensure-node-started (project)
   "Start a buffer's project's node if it is not already started."
-  (if (erl-project-node-started-p project)
+  (if (erl-project-node-started-p (erl-project-node-name project))
       (erl-project-check-backend project)
-     (erl-project-start-node project)))
+      (erl-project-start-node project)))
 
 (defun erl-project-check-backend (project)
   "Ensure that distel modules are available on the node used by `project'"
@@ -80,15 +80,15 @@ node-name"
   (unless buffer (setq buffer (current-buffer)))
   (erl-project-start-node (erl-project-buffer-project buffer)))
 
-(defun erl-project-start-node (&optional buffer)
+(defun erl-project-start-node (&optional project)
   "Starts a new erlang node for the project that `buffer' belongs to."
-  (let* ((node-name   (erl-project-node-name proj))
-         (proj-name   (erl-project-name proj))
-         (code-path   (cons distel-ebin-directory
-                            (erl-project-code-path-expand proj)))
-         (buffer-name (concat "*" proj-name "*")))
+  (let* ((node-name    (erl-project-node-name project))
+         (project-name (erl-project-name project))
+         (code-path    (cons distel-ebin-directory
+                            (erl-project-code-path-expand project)))
+         (buffer-name (concat "*" project-name "*")))
     (erl-project-ensure-node-not-started node-name)
-    (cd (expand-file-name (erl-project-root proj)))
+    (cd (expand-file-name (erl-project-root project)))
     (erl-project-make-comint-buffer-node-name buffer-name code-path)
     (erl-project-add-node node-name buffer-name)
     (erl-project-set-node-name-cache node-name)))
@@ -122,33 +122,33 @@ running on localhost."
   (when (erl-project-node-started-p node-name)
     (error "-- Node already up. --")))
 
-(defun erl-project-name (proj)
-  "Returns the name of the erl-project `proj'. No default value, come on you
+(defun erl-project-name (project)
+  "Returns the name of the erl-project `project'. No default value, come on you
 have to do *something* yourself!"
-  (erl-project-property 'name proj))
+  (erl-project-property 'name project))
 
-(defun erl-project-root (proj)
-  "Returns the root directory of the erl-project `proj'."
-  (erl-project-property 'root proj))
+(defun erl-project-root (project)
+  "Returns the root directory of the erl-project `project'."
+  (erl-project-property 'root project))
 
-(defun erl-project-lib-dirs (proj)
-  "Returns the erl-project `proj's lib-dirs, defaults to lib"
-  (or (erl-project-property 'lib-dirs proj) '("lib")))
+(defun erl-project-lib-dirs (project)
+  "Returns the erl-project `project's lib-dirs, defaults to lib"
+  (or (erl-project-property 'lib-dirs project) '("lib")))
 
-(defun erl-project-node-name (proj)
-  "Returns the erl-project `proj's erlang node-name. Currently only short names
-are supported. Defaults to project-name"
-  (or (erl-project-property 'node-sname proj) (erl-project-name proj)))
+(defun erl-project-node-name (project)
+  "Returns the erl-project `project's erlang node-name. Currently only short
+names are supported. Defaults to project-name"
+  (or (erl-project-property 'node-sname project) (erl-project-name project)))
 
-(defun erl-project-property (prop proj)
-  "Returns the value of the property of name prop from proj."
-  (cdr (assoc prop proj)))
+(defun erl-project-property (prop project)
+  "Returns the value of the property of name prop from project."
+  (cdr (assoc prop project)))
 
-(defun erl-project-code-path-expand (proj)
-  "Expands `proj's listed lib dirs to a full set of ebin directories, treating
-every subdirectory of each lib dir a an OTP application."
-  (let ((root     (erl-project-root proj))
-        (lib-dirs (erl-project-lib-dirs proj)))
+(defun erl-project-code-path-expand (project)
+  "Expands `project's listed lib dirs to a full set of ebin directories,
+treating every subdirectory of each lib dir a an OTP application."
+  (let ((root     (erl-project-root project))
+        (lib-dirs (erl-project-lib-dirs project)))
     (apply #'append
            (mapcar #'(lambda (dir)
                        (erl-project-path-expand root dir)) lib-dirs))))
@@ -180,10 +180,10 @@ current buffer."
             erl-project-projects))
 
 
-(defun erl-project-file-in-project-p (proj file-name)
+(defun erl-project-file-in-project-p (project file-name)
   "Returns non-nil if the fully qualified `file-name' is located inside the
-erl-project `proj'."
-  (file-under-path-p (erl-project-root proj) file-name))
+erl-project `project'."
+  (file-under-path-p (erl-project-root project) file-name))
 
 (defun file-under-path-p (path file-name)
   "Returns non-nil if the fully qualified `file-name' is located underneath
