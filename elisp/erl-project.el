@@ -62,8 +62,9 @@ activated for the first file that is located inside a project."
 
 (defun erl-project-check-backend (project)
   "Ensure that distel modules are available on the node used by `project'"
-  (erl-check-backend
-   (erl-project-make-node-name (erl-project-buffer-node-name)) nil))
+  (let ((node-name-str (erl-project-buffer-node-name)))
+    (erl-project-set-node-name-cache node-name-str)
+    (erl-check-backend (erl-project-make-node-name node-name-str) nil)))
 
 (defun erl-project-set-node-name-cache (str)
   "Sets the distel node-name cache to `str'@`system-name'. Return the newly set
