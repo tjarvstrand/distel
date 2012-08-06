@@ -40,10 +40,10 @@ activated for the first file that is located inside a project."
 
 (defun erl-project-init ()
   "Initializes `erl-project'."
-  (make-local-variable erl-nodename-cache)
-  (add-hook 'erlang-mode-hook 'erl-project-buffer-setup))
+  (make-variable-buffer-local 'erl-nodename-cache)
+  (add-hook 'erlang-mode-hook 'erl-project-erlang-load-hook))
 
-(defun erl-project-buffer-setup ()
+(defun erl-project-erlang-load-hook ()
   "Buffer specific (not necessarily buffer-local) setup."
   (when erl-project-auto-start-node
     (erl-project-ensure-buffer-node-started (current-buffer))
