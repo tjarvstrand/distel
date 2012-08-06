@@ -45,19 +45,23 @@ activated for the first file that is located inside a project."
 
 (defun erl-project-erlang-load-hook ()
   "Buffer specific (not necessarily buffer-local) setup."
-  (when erl-project-auto-start-node
-    (erl-project-ensure-buffer-node-started (current-buffer))
-    ))
+  (let* ((buffer  (current-buffer))
+         (project (erl-project-buffer-project buffer)))
+    (when (and project erl-project-auto-start-node)
+      (erl-project-ensure-buffer-node-started buffer))))
 
 (defun erl-project-ensure-buffer-node-started (buffer)
   "Start a buffer's project's node if it is not already started."
-  (if (erl-project-buffer-node-started-p buffer)
-      (erl-project-buffer-check-backend buffer)
-      (erl-project-buffer-start-node buffer)))
+  (erl-project-ensure-node-started (erl-project-buffer-project buffer)))
 
-(defun erl-project-buffer-check-backend (buffer)
-  "Ensure that distel modules are available on the node used by `buffers''s
-project"
+(defun erl-project-ensure-node-started (project)
+  "Start a buffer's project's node if it is not already started."
+  (if (erl-project-node-started-p project)
+      (erl-project-check-backend project)
+     (erl-project-start-node project)))
+
+(defun erl-project-check-backend (project)
+  "Ensure that distel modules are available on the node used by `project'"
   (erl-check-backend
    (erl-project-make-node-name (erl-project-buffer-node-name)) nil))
 
@@ -74,24 +78,27 @@ node-name"
 (defun erl-project-buffer-start-node (&optional buffer)
   "Starts a new erlang node for the project that `buffer' belongs to."
   (unless buffer (setq buffer (current-buffer)))
-  (let* ((proj        (erl-project-buffer-project buffer))
-         (node-name   (erl-project-node-name proj))
+  (erl-project-start-node (erl-project-buffer-project buffer)))
+
+(defun erl-project-start-node (&optional buffer)
+  "Starts a new erlang node for the project that `buffer' belongs to."
+  (let* ((node-name   (erl-project-node-name proj))
          (proj-name   (erl-project-name proj))
          (code-path   (cons distel-ebin-directory
                             (erl-project-code-path-expand proj)))
          (buffer-name (concat "*" proj-name "*")))
+    (erl-project-ensure-node-not-started node-name)
     (cd (expand-file-name (erl-project-root proj)))
-    (erl-project-start-node node-name buffer-name code-path)
+    (erl-project-make-comint-buffer-node-name buffer-name code-path)
+    (erl-project-add-node node-name buffer-name)
     (erl-project-set-node-name-cache node-name)))
 
-(defun erl-project-start-node (node-name buffer-name path)
-  "Starts a node with `name' in `buf-name' adding `path' to the
-node's code-path using the -pa flag."
-  (erl-project-ensure-node-not-started node-name)
+(defun erl-project-make-comint-buffer (node-name buffer-name path)
+  "In a comint-mode buffer Starts a node with `name' in `buf-name' adding
+`path' to the node's code-path using the -pa flag."
   (let ((args (append (list "-sname" node-name "-pa") path)))
     (get-buffer-create buffer-name)
-    (apply #'make-comint-in-buffer node-name buffer-name "erl" nil args)
-    (erl-project-add-node node-name buffer-name)))
+    (apply #'make-comint-in-buffer node-name buffer-name "erl" nil args)))
 
 (defun erl-project-add-node (node-name buffer-name)
   "Add a new node to `erl-project-nodes'."
