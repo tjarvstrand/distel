@@ -9,9 +9,6 @@
 ;; - Don't start thousands of processes (related to previous point?).
 ;; - Fix edb-bug
 ;; - Fix assertion-bug in epmd.el
-;; - Mark set when saving(?)
-;; - Fix no erlang-extended-mode for modules outside of projects.
-;; - Fix crashing hook for non-project modules.
 ;; - Run distel nodeup-hook when inferior node is started.
 
 (defgroup erl-project '()

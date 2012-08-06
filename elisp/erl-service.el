@@ -1238,18 +1238,20 @@ The match positions are erl-mfa-regexp-{module,function,arity}-match.")
 (defun erl-who-calls (node)
   (interactive (list (erl-target-node)))
   (apply #'erl-find-callers
-         (or (erl-read-call-mfa) (error "No call at point."))))
+         (cons node (or (erl-read-call-mfa) (error "No call at point.")))))
 
-(defun erl-find-callers (mod fun arity)
+(defun erl-find-callers (node mod fun arity)
+  (with-current-buffer (get-buffer-create "*Erlang Calls*")
+    (setq erl-nodename-cache node))
   (erl-spawn
-    (erl-send-rpc (erl-target-node) 'distel 'who_calls
+    (erl-send-rpc node 'distel 'who_calls
                   (list (intern mod) (intern fun) arity))
     (message "Request sent..")
     (erl-receive ()
         ((['rex ['error reason]]
           (message "Error: %s" reason))
          (['rex calls]
-          (with-current-buffer (get-buffer-create "*Erlang Calls*")
+          (with-current-buffer (get-buffer "*Erlang Calls*")
 	    (erl-who-calls-mode)
             (setq buffer-read-only t)
             (let ((inhibit-read-only t))
