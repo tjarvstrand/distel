@@ -70,23 +70,33 @@ node-name"
 
 (defun erl-project-start-node (&optional project)
   "Starts a new erlang node for the project that `buffer' belongs to."
-  (let* ((node-name    (erl-project-node-name project))
-         (project-name (erl-project-name project))
-         (code-path    (cons distel-ebin-directory
-                            (erl-project-code-path-expand project)))
-         (buffer-name (concat "*" project-name "*")))
+  (let* ((project-name (erl-project-name project))
+         (node-name    (erl-project-node-name project))
+         (buffer-name  (concat "*" project-name "*"))
+         (command      (erl-project-build-project-command project))
+         (pwd          (expand-file-name (erl-project-root project))))
     (erl-project-ensure-node-not-started node-name)
-    (cd (expand-file-name (erl-project-root project)))
-    (erl-project-make-comint-buffer node-name buffer-name code-path)
+    (erl-project-make-comint-buffer buffer-name pwd command)
     (erl-project-add-node node-name buffer-name)
     (erl-project-set-node-name-cache node-name)))
 
-(defun erl-project-make-comint-buffer (node-name buffer-name path)
+(defun erl-project-build-project-command (project)
+  (let ((command (erl-project-start-command project)))
+    (if command
+        (delete "" (split-string command))
+        (let ((path (cons
+                     distel-ebin-directory
+                     (erl-project-code-path-expand project)))
+              (sname (erl-project-node-name project)))
+          (append (list "erl" "-sname" sname "-pa") path)))))
+
+(defun erl-project-make-comint-buffer (buffer-name pwd command)
   "In a comint-mode buffer Starts a node with `name' in `buf-name' adding
 `path' to the node's code-path using the -pa flag."
-  (let ((args (append (list "-sname" node-name "-pa") path)))
-    (get-buffer-create buffer-name)
-    (apply #'make-comint-in-buffer node-name buffer-name "erl" nil args)))
+  (let* ((cmd  (car command))
+         (args (cdr command)))
+    (with-current-buffer (get-buffer-create buffer-name) (cd pwd))
+    (apply #'make-comint-in-buffer cmd buffer-name cmd nil args)))
 
 (defun erl-project-add-node (node-name buffer-name)
   "Add a new node to `erl-project-nodes'."
@@ -120,13 +130,17 @@ have to do *something* yourself!"
   (erl-project-property 'root project))
 
 (defun erl-project-lib-dirs (project)
-  "Returns the erl-project `project's lib-dirs, defaults to lib"
-  (or (erl-project-property 'lib-dirs project) '("lib")))
+  "Returns the erl-project `project's library directories."
+  (erl-project-property 'lib-dirs project))
 
 (defun erl-project-node-name (project)
   "Returns the erl-project `project's erlang node-name. Currently only short
-names are supported. Defaults to project-name"
+names are supported."
   (or (erl-project-property 'node-sname project) (erl-project-name project)))
+
+(defun erl-project-start-command (project)
+  "Returns the erl-project `project's command for starting it's project node."
+  (erl-project-property 'start-command project))
 
 (defun erl-project-property (prop project)
   "Returns the value of the property of name prop from project."
